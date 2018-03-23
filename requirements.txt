@@ -1,4 +1,5 @@
 pymunk
 pybullet
 gym
+matplotlib
 
