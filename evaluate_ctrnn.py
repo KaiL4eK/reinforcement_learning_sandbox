@@ -8,7 +8,7 @@ import neat
 import cv2
 
 
-simulation_seconds = 20
+simulation_seconds = 20.
 
 ################################
 
@@ -26,7 +26,7 @@ show_gui = False
 if show_gui:
     physicsClient = p.connect(p.GUI)
 
-stepSize=1/1000.
+stepSize = 1/1000.
 
 def eval_genome(genome, config):
     if not show_gui:
@@ -46,6 +46,7 @@ def eval_genome(genome, config):
 
     p.setGravity(0,0,-9.81)
 
+    
     p.setPhysicsEngineParameter(fixedTimeStep=stepSize)
 
     ref_point = np.array([0., 0., 0.])
@@ -64,7 +65,8 @@ def eval_genome(genome, config):
 
     not_touched = True
 
-    net = neat.nn.FeedForwardNetwork.create(genome, config)
+    net = neat.ctrnn.CTRNN.create(genome, config, stepSize)
+    net.reset()
 
     result = 0
 
@@ -88,17 +90,17 @@ def eval_genome(genome, config):
 
             # Get error
             err = ref_point - ballPosOnPlate
-            result -= (err[0] * err[0] + err[1] * err[1]) * 1e3
+            result -= (err[0] * err[0] + err[1] * err[1]) / 200.
 
             if ballpos[2] < .1:
                 if not show_gui:
                     p.disconnect()
-                return result / 20000. * 100.
+                return (t + result) / simulation_seconds * 100. - 100
 
             # Process control system
-            inputs = np.array([ref_point[0] / 0.2 - 1., ref_point[1] / 0.2 - 1., ballPosOnPlate[0] / 0.2 - 1., ballPosOnPlate[1] / 0.2 - 1.])
+            inputs = np.array([ref_point[0] / 0.2, ref_point[1] / 0.2, ballPosOnPlate[0] / 0.2, ballPosOnPlate[1] / 0.2])
 
-            action = net.activate(inputs)
+            action = net.advance(inputs, stepSize, stepSize)
 
             # Get control
             target_alpha = action[0] * 20
@@ -116,13 +118,10 @@ def eval_genome(genome, config):
         
         t += stepSize
         
-
-    result += t * 10000
-    
     if not show_gui:
         p.disconnect()
         
-    return result / 20000. * 100.
+    return (t + result) / simulation_seconds * 100.
 
 def eval_genomes(genomes, config):
 

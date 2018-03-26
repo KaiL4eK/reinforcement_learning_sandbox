@@ -126,7 +126,9 @@ while 1:
         target_alpha = np.clip(target_alpha, -20, 20)
         target_beta  = np.clip(target_beta, -20, 20)
 
-    print(ref_point[0:2])
+        print(ballPosOnPlate)
+
+    # print(ref_point[0:2])
 
     key = p.getKeyboardEvents()
     if p.B3G_RIGHT_ARROW in key:
