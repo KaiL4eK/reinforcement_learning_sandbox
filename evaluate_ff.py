@@ -6,130 +6,94 @@ import time
 
 import neat
 import cv2
+import ball_on_plate_env as env
 
-
-simulation_seconds = 20
+simulation_seconds = 20.
 
 ################################
 
-import pybullet as p
 from time import sleep
 import math
-import matplotlib as mpl 
-import matplotlib.pyplot as plt 
 import numpy as np
 
 ################################
 
-show_gui = False
+ref_point = np.array([0., 0.])
 
-if show_gui:
-    physicsClient = p.connect(p.GUI)
-
-stepSize=1/1000.
 
 def eval_genome(genome, config):
-    if not show_gui:
-        physicsClient = p.connect(p.DIRECT)
-    p.resetSimulation()
-
-    plateId = p.loadURDF("plate.urdf")
-
-    ballRadius = 52.2 / 2 / 1000
-    ballMass = 0.205
-    ballInertia = 2./5*ballMass*ballRadius*ballRadius
-
-    sphereCollisionShapeId = p.createCollisionShape(shapeType=p.GEOM_SPHERE, radius=ballRadius)
-    ballId = p.createMultiBody(baseMass=ballMass, baseInertialFramePosition=[ballInertia]*3, 
-                              baseCollisionShapeIndex=sphereCollisionShapeId, baseVisualShapeIndex=-1, 
-                              basePosition = [0,.1,.26])
-
-    p.setGravity(0,0,-9.81)
-
-    p.setPhysicsEngineParameter(fixedTimeStep=stepSize)
-
-    ref_point = np.array([0., 0., 0.])
-
-    t = 0
-
-    # around x
-    target_alpha = 0
-    # around y
-    target_beta  = 0
-
-    pos_prop    = 0.01
-    vel_prop    = 1
-    vel_max     = 2
-    force_max   = 3
-
-    not_touched = True
+    ballOnPlate = env.BallOnPlate(showGUI=False, randomInitial=False)
 
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
-    result = 0
+    cost = 100
 
-    while t < simulation_seconds:
-        if not_touched and len(p.getContactPoints(ballId, plateId, linkIndexB=1)) == 0:
-            pass
-        else:
-            not_touched = False
+    intial_positions = [[0  , 0  ],
+                        [0.4, 0.3],
+                        [0.2, 0.5]]
 
-            # Calc input
-            # ref_point = np.array([.05*math.cos(t), .05*math.sin(t), 0])
+    for i in range(len(intial_positions)):
 
-            # Get position
-            ballpos, ballorn = p.getBasePositionAndOrientation(ballId)
+        envInput = [0, 0]
+        result = 0
+        dropDown = False
 
-            ls = p.getLinkState(bodyUniqueId=plateId, linkIndex=1)
-            platePos, plateOrn = ls[0], ls[1]
-            
-            invPlatePos, invPlateOrn = p.invertTransform(platePos, plateOrn)
-            ballPosOnPlate, ballOrnOnPlate = p.multiplyTransforms(invPlatePos, invPlateOrn, ballpos, ballorn)
+        ballOnPlate.intial_pos = np.array(intial_positions[i])
+        ballOnPlate.reset()
+
+        posOnPlate  = ballOnPlate.intial_pos
+        prev_err    = [0, 0]
+        integr_err  = 0
+
+        while ballOnPlate.time < simulation_seconds:
+            # half of plate circle
+            ref_point = np.array([.5*math.cos(ballOnPlate.time/2), .5*math.sin(ballOnPlate.time/2)])
 
             # Get error
-            err = ref_point - ballPosOnPlate
-            result -= (err[0] * err[0] + err[1] * err[1]) * 1e3
-
-            if ballpos[2] < .1:
-                if not show_gui:
-                    p.disconnect()
-                return result / 20000. * 100.
+            err = ref_point - posOnPlate
+            result -= (err[0] * err[0] + err[1] * err[1]) / 200.
 
             # Process control system
-            inputs = np.array([ref_point[0] / 0.2 - 1., ref_point[1] / 0.2 - 1., ballPosOnPlate[0] / 0.2 - 1., ballPosOnPlate[1] / 0.2 - 1.])
+            netInput = np.array([err[0] / 2, err[1] / 2, posOnPlate[0], posOnPlate[1], envInput[0], envInput[1]])
+            # print(netInput)
+            netOutput = net.activate(netInput)
 
-            action = net.activate(inputs)
+            ### PID controller
+            prop    = netOutput[0] * 500
+            diff    = netOutput[1] * 100
+            integr  = netOutput[2] * 0.1
 
-            # Get control
-            target_alpha = action[0] * 20
-            target_beta  = action[1] * 20
+            integr_err += err
+            d_err = err - prev_err
 
-            p.setJointMotorControl2(bodyUniqueId=plateId, jointIndex=0, controlMode=p.POSITION_CONTROL, 
-                                    positionGain=pos_prop, velocityGain=vel_prop, maxVelocity=vel_max,
-                                    targetPosition=target_alpha*math.pi/180, force=force_max)
+            envInput[0] = prop * err[1] + diff * d_err[1] + integr_err[1] * integr
+            envInput[0] = -envInput[0]
+            envInput[1] = prop * err[0] + diff * d_err[0] + integr_err[0] * integr
 
-            p.setJointMotorControl2(bodyUniqueId=plateId, jointIndex=1, controlMode=p.POSITION_CONTROL,
-                                    positionGain=pos_prop, velocityGain=vel_prop, maxVelocity=vel_max,
-                                    targetPosition=target_beta*math.pi/180, force=force_max)
+            prev_err = err
+            ### PID controller
 
-        p.stepSimulation()
+            envInput = np.clip(envInput, -1, 1)
+
+            posOnPlate, isEnd = ballOnPlate.step(envInput)
+            if isEnd:
+                # Bad penalty as fall
+                dropDown = True
+                break
+            # sleep(ballOnPlate.dt)
+
+
+        if dropDown:
+            current_cost = (ballOnPlate.time + result) / simulation_seconds * 100. - 100
+        else:
+            current_cost = (ballOnPlate.time + result) / simulation_seconds * 100.
+
+        cost = min(current_cost, cost)
+
+    ballOnPlate.close()
+    return cost
         
-        t += stepSize
-        
-
-    result += t * 10000
-    
-    if not show_gui:
-        p.disconnect()
-        
-    return result / 20000. * 100.
-
 def eval_genomes(genomes, config):
-
-    # img = sim_map.get_image(resol)
 
     for genome_id, genome in genomes:
         genome.fitness = eval_genome(genome, config)
-
-    # cv2.imshow('0', cv2.flip(img, 0))
-    # cv2.waitKey(30)

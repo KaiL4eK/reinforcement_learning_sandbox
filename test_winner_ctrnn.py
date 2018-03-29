@@ -7,6 +7,10 @@ import time
 
 import neat
 import cv2
+import ball_on_plate_env as env
+import numpy as np
+import math
+from time import sleep
 
 # load the winner
 with open('winner-ctrnn', 'rb') as f:
@@ -18,90 +22,62 @@ config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                      neat.DefaultSpeciesSet, neat.DefaultStagnation,
                      config_path)
 
-simulation_seconds = 30
-stepSize=1/1000.
 
-net = neat.ctrnn.CTRNN.create(c, config, stepSize)
+ballOnPlate = env.BallOnPlate(showGUI=True, randomInitial=True)
+
+net = neat.ctrnn.CTRNN.create(c, config, ballOnPlate.dt)
 net.reset()
 
-import pybullet as p
-from time import sleep
-import math
-import matplotlib as mpl 
-import matplotlib.pyplot as plt 
-import numpy as np
-
-
-physicsClient = p.connect(p.GUI)
-plateId = p.loadURDF("plate.urdf")
-
-ballRadius = 52.2 / 2 / 1000
-ballMass = 0.205
-ballInertia = 2./5*ballMass*ballRadius*ballRadius
-
-sphereCollisionShapeId = p.createCollisionShape(shapeType=p.GEOM_SPHERE, radius=ballRadius)
-ballId = p.createMultiBody(baseMass=ballMass, baseInertialFramePosition=[ballInertia]*3, 
-                          baseCollisionShapeIndex=sphereCollisionShapeId, baseVisualShapeIndex=-1, 
-                          basePosition = [0,.1,.26])
-
-p.setGravity(0,0,-9.81)
-
-
-p.setPhysicsEngineParameter(fixedTimeStep=stepSize)
-
-ref_point = np.array([0., 0., 0.])
+ref_point = np.array([0., 0.])
 
 t = 0
 
-# around x
-target_alpha = 0
-# around y
-target_beta  = 0
-
-pos_prop    = 0.01
-vel_prop    = 1
-vel_max     = 2
-force_max   = 3
-
-not_touched = True
-
+envInput = [0, 0]
 result = 0
+dropDown = False
 
-while t < simulation_seconds:
-    if not_touched and len(p.getContactPoints(ballId, plateId, linkIndexB=1)) == 0:
-        pass
-    else:
-        not_touched = False
+ballOnPlate.reset()
 
-        # Get position
-        ballpos, ballorn = p.getBasePositionAndOrientation(ballId)
+posOnPlate  = ballOnPlate.intial_pos
+prev_err    = [0, 0]
+integr_err  = 0
 
-        ls = p.getLinkState(bodyUniqueId=plateId, linkIndex=1)
-        platePos, plateOrn = ls[0], ls[1]
-        
-        invPlatePos, invPlateOrn = p.invertTransform(platePos, plateOrn)
-        ballPosOnPlate, ballOrnOnPlate = p.multiplyTransforms(invPlatePos, invPlateOrn, ballpos, ballorn)
 
-        if ballpos[2] < .1:
-            print('Fallen!')
-            break
+while ballOnPlate.time < 20:
+    # half of plate circle
+    # ref_point = np.array([.5*math.cos(ballOnPlate.time/2), .5*math.sin(ballOnPlate.time/2)])
 
-        # Process control system
-        inputs = np.array([ref_point[0] / 0.2, ref_point[1] / 0.2, ballPosOnPlate[0] / 0.2, ballPosOnPlate[1] / 0.2])
+    # Get error
+    err = ref_point - posOnPlate
+    result -= (err[0] * err[0] + err[1] * err[1]) / 200.
 
-        action = net.advance(inputs, stepSize, stepSize)
+    # Process control system
+    netInput = np.array([err[0] / 2, err[1] / 2, posOnPlate[0], posOnPlate[1], envInput[0], envInput[1]])
+    # print(netInput)
+    netOutput = net.advance(netInput, ballOnPlate.dt, ballOnPlate.dt)
 
-        # Get control
-        target_alpha = action[0] * 20
-        target_beta  = action[1] * 20
+    ### PID controller
+    prop    = netOutput[0] * 500
+    diff    = netOutput[1] * 100
+    integr  = netOutput[2] * 0.1
 
-        p.setJointMotorControl2(bodyUniqueId=plateId, jointIndex=0, controlMode=p.POSITION_CONTROL, 
-                                positionGain=pos_prop, velocityGain=vel_prop, maxVelocity=vel_max,
-                                targetPosition=target_alpha*math.pi/180, force=force_max)
+    integr_err += err
+    d_err = err - prev_err
 
-        p.setJointMotorControl2(bodyUniqueId=plateId, jointIndex=1, controlMode=p.POSITION_CONTROL,
-                                positionGain=pos_prop, velocityGain=vel_prop, maxVelocity=vel_max,
-                                targetPosition=target_beta*math.pi/180, force=force_max)
+    envInput[0] = prop * err[1] + diff * d_err[1] + integr_err[1] * integr
+    envInput[0] = -envInput[0]
+    envInput[1] = prop * err[0] + diff * d_err[0] + integr_err[0] * integr
 
-    p.stepSimulation()
-    sleep(stepSize)
+    prev_err = err
+    ### PID controller
+
+    envInput = np.clip(envInput, -1, 1)
+
+    posOnPlate, isEnd = ballOnPlate.step(envInput)
+    if isEnd:
+        # Bad penalty as fall
+        print('Fallen!')
+        break
+
+    sleep(ballOnPlate.dt)
+

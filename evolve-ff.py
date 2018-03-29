@@ -48,6 +48,5 @@ def run():
     #                   filename="winner-feedforward-enabled-pruned.gv", show_disabled=False, prune_unused=True)
 
 if __name__ == '__main__':
-    pass
-    # run()
+    run()
 

@@ -4,3 +4,6 @@ gym
 matplotlib
 -e git+https://github.com/CodeReclaimers/neat-python.git#egg=neat-python
 graphviz
+keras
+h5py
+tensorflow-gpu

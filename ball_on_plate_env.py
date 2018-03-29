@@ -11,7 +11,7 @@ class BallOnPlate:
         self.plateSize = 0.2
         self.randomInitial = randomInitial
 
-        self.intial_pos = [0., 0.]
+        self.intial_pos = np.array([0., 0.])
 
         # Now work with simulator
         if showGUI:
@@ -71,10 +71,10 @@ class BallOnPlate:
         self.time           = 0
 
         if self.randomInitial:
-            self.intial_pos = [(rand.random() * 2 - 1) * self.plateSize / 2, (rand.random() * 2 - 1) * self.plateSize / 2]
+            self.intial_pos = [(rand.random() * 2 - 1) / 2, (rand.random() * 2 - 1) / 2]
 
         self.ballHeight     = .28
-        self.ballPosition   = self.intial_pos
+        self.ballPosition   = self.intial_pos * self.plateSize
 
         # Alpha, Beta
         self.angleTargets = [0, 0]
@@ -93,7 +93,7 @@ class BallOnPlate:
         sphereCollisionShapeId = p.createCollisionShape(shapeType=p.GEOM_SPHERE, radius=ballRadius)
         self.ballId = p.createMultiBody(baseMass=ballMass, baseInertialFramePosition=[ballInertia]*3, 
                                   baseCollisionShapeIndex=sphereCollisionShapeId, baseVisualShapeIndex=-1, 
-                                  basePosition = [self.intial_pos[0], self.intial_pos[1], self.ballHeight])
+                                  basePosition = [self.ballPosition[0], self.ballPosition[1], self.ballHeight])
 
     def close(self):
         p.disconnect()
