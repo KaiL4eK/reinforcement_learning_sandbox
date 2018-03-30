@@ -27,10 +27,10 @@ def run(filepath, pop_count):
     pop.add_reporter(neat.Checkpointer(generation_interval=100, filename_prefix='checkpoints_ff/chk_'))
 
     # if render_flag:
-    winner = pop.run(eval_genomes, pop_count)
+    # winner = pop.run(eval_genomes, pop_count)
     # else:
-    # pe = neat.ParallelEvaluator(4, eval_genome)
-    # winner = pop.run(pe.evaluate, pop_count)
+    pe = neat.ParallelEvaluator(4, eval_genome)
+    winner = pop.run(pe.evaluate, pop_count)
 
     # Save the winner.
     with open('winner-ff', 'wb') as f:
