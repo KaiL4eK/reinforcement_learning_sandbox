@@ -26,11 +26,24 @@ def eval_genome(genome, config):
 
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
-    cost = 100
+    cost = 0
 
-    intial_positions = [[0  , 0  ],
-                        [0.4, 0.3],
-                        [0.2, 0.5]]
+    # intial_positions = [[0  , 0  ],
+    #                     [-0.4, 0.3],
+    #                     [-0.5, -0.5],
+    #                     [0.7, 0.7]]
+
+    intial_positions = [[0.5, 0.5],
+                        [-0.5, -0.5],
+                        [-0.5, 0.5],
+                        [0.5, -0.5],
+                        [0., 0.]]
+
+    reference_positions = [[-0.5, -0.5],
+                           [0.5, 0.5],
+                           [0.5, -0.5],
+                           [-0.5, 0.5],
+                           [0., 0.]]
 
     for i in range(len(intial_positions)):
 
@@ -38,7 +51,9 @@ def eval_genome(genome, config):
         result = 0
         dropDown = False
 
-        ballOnPlate.intial_pos = np.array(intial_positions[i])
+        ballOnPlate.intial_pos  = np.array(intial_positions[i])
+        ref_point               = np.array(reference_positions[i])
+
         ballOnPlate.reset()
 
         posOnPlate  = ballOnPlate.intial_pos
@@ -47,7 +62,8 @@ def eval_genome(genome, config):
 
         while ballOnPlate.time < simulation_seconds:
             # half of plate circle
-            ref_point = np.array([.5*math.cos(ballOnPlate.time/2), .5*math.sin(ballOnPlate.time/2)])
+            if i == 4:
+                ref_point = np.array([.5*math.cos(ballOnPlate.time/2), .5*math.sin(ballOnPlate.time/2)])
 
             # Get error
             err = ref_point - posOnPlate
@@ -88,10 +104,10 @@ def eval_genome(genome, config):
         else:
             current_cost = (ballOnPlate.time + result) / simulation_seconds * 100.
 
-        cost = min(current_cost, cost)
+        cost += current_cost
 
     ballOnPlate.close()
-    return cost
+    return cost / len(intial_positions)
         
 def eval_genomes(genomes, config):
 

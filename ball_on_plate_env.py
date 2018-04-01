@@ -11,13 +11,31 @@ class BallOnPlate:
         self.plateSize = 0.2
         self.randomInitial = randomInitial
 
-        self.intial_pos = np.array([0., 0.])
+        self.intial_pos     = np.array([0., 0.])
+        self.ballPosition   = self.intial_pos * self.plateSize
+        self.ballHeight     = .28
 
         # Now work with simulator
         if showGUI:
             p.connect(p.GUI)
         else:
             p.connect(p.DIRECT)
+
+        p.resetSimulation()
+
+        p.setGravity(0,0,-9.81)
+        p.setPhysicsEngineParameter(fixedTimeStep=self.dt)
+
+        ballRadius = 52.2 / 2 / 1000
+        ballMass = 0.205
+        ballInertia = 2./5*ballMass*ballRadius*ballRadius
+
+        self.plateId = p.loadURDF("plate.urdf")
+
+        sphereCollisionShapeId = p.createCollisionShape(shapeType=p.GEOM_SPHERE, radius=ballRadius)
+        self.ballId = p.createMultiBody(baseMass=ballMass, baseInertialFramePosition=[ballInertia]*3, 
+                                  baseCollisionShapeIndex=sphereCollisionShapeId, baseVisualShapeIndex=-1, 
+                                  basePosition = [self.ballPosition[0], self.ballPosition[1], self.ballHeight])
 
         self.reset()
 
@@ -71,7 +89,7 @@ class BallOnPlate:
         self.time           = 0
 
         if self.randomInitial:
-            self.intial_pos = [(rand.random() * 2 - 1) / 2, (rand.random() * 2 - 1) / 2]
+            self.intial_pos = np.array([(rand.random() * 2 - 1) / 2., (rand.random() * 2 - 1) / 2.])
 
         self.ballHeight     = .28
         self.ballPosition   = self.intial_pos * self.plateSize
@@ -79,21 +97,14 @@ class BallOnPlate:
         # Alpha, Beta
         self.angleTargets = [0, 0]
 
-        p.resetSimulation()
+        p.resetBasePositionAndOrientation(bodyUniqueId=self.ballId, posObj=[self.ballPosition[0], self.ballPosition[1], self.ballHeight], ornObj=[0, 0, 0, 1])
 
-        p.setGravity(0,0,-9.81)
-        p.setPhysicsEngineParameter(fixedTimeStep=self.dt)
+        p.resetJointState(bodyUniqueId=self.plateId, jointIndex=0, targetValue=0, targetVelocity=0)
+        p.resetJointState(bodyUniqueId=self.plateId, jointIndex=1, targetValue=0, targetVelocity=0)
 
-        ballRadius = 52.2 / 2 / 1000
-        ballMass = 0.205
-        ballInertia = 2./5*ballMass*ballRadius*ballRadius
+        while not self.is_contacted():
+            p.stepSimulation()
 
-        self.plateId = p.loadURDF("plate.urdf")
-
-        sphereCollisionShapeId = p.createCollisionShape(shapeType=p.GEOM_SPHERE, radius=ballRadius)
-        self.ballId = p.createMultiBody(baseMass=ballMass, baseInertialFramePosition=[ballInertia]*3, 
-                                  baseCollisionShapeIndex=sphereCollisionShapeId, baseVisualShapeIndex=-1, 
-                                  basePosition = [self.ballPosition[0], self.ballPosition[1], self.ballHeight])
 
     def close(self):
         p.disconnect()
