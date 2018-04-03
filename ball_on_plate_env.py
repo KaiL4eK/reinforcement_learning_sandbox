@@ -61,6 +61,11 @@ class BallOnPlate:
         p.stepSimulation()
         self.time += self.dt
 
+        self._update_position()
+
+        return self.ballPosition, self._is_end()
+
+    def _update_position(self):
         ballpos, ballorn = p.getBasePositionAndOrientation(self.ballId)
         
         ls = p.getLinkState(bodyUniqueId=self.plateId, linkIndex=1)
@@ -73,8 +78,6 @@ class BallOnPlate:
         # [x, y] on plate in range [-1; 1]
         self.ballPosition = ballPosOnPlate[0:2] / self.plateSize
         self.ballHeight = ballpos[2]
-
-        return self.ballPosition, self._is_end()
 
     def is_contacted(self):
         return len(p.getContactPoints(self.ballId, self.plateId, linkIndexB=1)) != 0
@@ -105,6 +108,9 @@ class BallOnPlate:
         while not self.is_contacted():
             p.stepSimulation()
 
+        self._update_position()
+
+        return self.ballPosition
 
     def close(self):
         p.disconnect()

@@ -54,9 +54,8 @@ def eval_genome(genome, config):
         ballOnPlate.intial_pos  = np.array(intial_positions[i])
         ref_point               = np.array(reference_positions[i])
 
-        ballOnPlate.reset()
+        posOnPlate = ballOnPlate.reset()
 
-        posOnPlate  = ballOnPlate.intial_pos
         prev_err    = [0, 0]
         integr_err  = 0
 
@@ -67,7 +66,7 @@ def eval_genome(genome, config):
 
             # Get error
             err = ref_point - posOnPlate
-            result -= (err[0] * err[0] + err[1] * err[1]) / 200.
+            result -= (err[0] * err[0] + err[1] * err[1]) * (ballOnPlate.time + 1) / 400.
 
             # Process control system
             netInput = np.array([err[0] / 2, err[1] / 2, posOnPlate[0], posOnPlate[1], envInput[0], envInput[1]])
