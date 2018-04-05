@@ -5,7 +5,6 @@ import pickle
 import time
 
 import neat
-import cv2
 
 sys.path.append('../')
 import ball_on_plate_env as env
@@ -19,9 +18,6 @@ import math
 import numpy as np
 
 ################################
-
-ref_point = np.array([0., 0.])
-
 
 def eval_genome(genome, config):
     ballOnPlate = env.BallOnPlate(showGUI=False, randomInitial=False)
@@ -76,7 +72,7 @@ def eval_genome(genome, config):
             speed = (posOnPlate - prevPosOnPlate)/ballOnPlate.dt
 
             # Process control system
-            netInput = np.array([err[0] / 2, err[1] / 2, posOnPlate[0], posOnPlate[1], 
+            netInput = np.array([err[0], err[1], posOnPlate[0], posOnPlate[1], 
                                 envInput[0], envInput[1], speed[0], speed[1]])
             # print(netInput)
             netOutput = net.activate(netInput)
@@ -94,10 +90,11 @@ def eval_genome(genome, config):
             envInput[1] = prop * err[0] + diff * d_err[0] + integr_err[0] * integr
 
             prev_err = err
-            prevPosOnPlate = posOnPlate
             ### PID controller
 
             envInput = np.clip(envInput, -1, 1)
+
+            prevPosOnPlate = posOnPlate
 
             posOnPlate, isEnd = ballOnPlate.step(envInput)
             if isEnd:
@@ -108,7 +105,7 @@ def eval_genome(genome, config):
 
 
         if dropDown:
-            current_cost = (ballOnPlate.time + result) / simulation_seconds * 100. - 100
+            current_cost = (ballOnPlate.time + result) / simulation_seconds * 100. - 1e4
         else:
             current_cost = (ballOnPlate.time + result) / simulation_seconds * 100.
 

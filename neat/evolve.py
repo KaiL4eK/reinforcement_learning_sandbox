@@ -7,7 +7,7 @@ import time
 import neat
 import visualize
 
-
+import reporters as r
 
 parser = argparse.ArgumentParser(description="Description")
 parser.add_argument("--chk",    help="Path to checkpoint file to restore",  default=None, action="store")
@@ -27,22 +27,31 @@ ctrnn_flag = ns.ctrnn
 if not ctrnn_flag:
     from evaluate_ff import *
 
-    checkpointPrefix    = 'checkpoints_ff/chk_'
+    checkpointDir       = 'checkpoints_ff'
     winnerFname         = 'winner_ff'
     pictureDir          = 'pictures_ff'
     configFname         = 'config-feedforward'
+    logFname            = 'log_ff.txt'
 
     print('Processing NEAT with FF structure')
 else:
     from evaluate_ctrnn import *
 
-    checkpointPrefix    = 'checkpoints_ctrnn/chk_'
+    checkpointDir       = 'checkpoints_ctrnn'
     winnerFname         = 'winner_ctrnn'
     pictureDir          = 'pictures_ctrnn'
     configFname         = 'config-ctrnn'
+    logFname            = 'log_ctrnn.txt'
 
     print('Processing NEAT with CTRNN structure')
 
+checkpointPrefix    = checkpointDir + '/chk_'
+
+if not os.path.exists(checkpointDir):
+    os.makedirs(checkpointDir)
+
+if not os.path.exists(pictureDir):
+    os.makedirs(pictureDir)
 
 def run():
     if restoreCheckpoint is None:
@@ -59,6 +68,7 @@ def run():
     stats = neat.StatisticsReporter()
     pop.add_reporter(stats)
     pop.add_reporter(neat.StdOutReporter(True))
+    pop.add_reporter(r.FileReporter(logFname, True))
     pop.add_reporter(neat.Checkpointer(generation_interval=100, filename_prefix=checkpointPrefix))
 
     # if render_flag:
