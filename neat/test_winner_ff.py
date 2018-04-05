@@ -7,10 +7,12 @@ import time
 
 import neat
 import cv2
-import ball_on_plate_env as env
 import numpy as np
 import math
 from time import sleep
+
+sys.path.append('../')
+import ball_on_plate_env as env
 
 # load the winner
 with open('winner-ff', 'rb') as f:
@@ -51,14 +53,15 @@ while ballOnPlate.time < 20:
     result -= (err[0] * err[0] + err[1] * err[1]) / 400.
 
     # Process control system
-    netInput = np.array([err[0] / 2, err[1] / 2, posOnPlate[0], posOnPlate[1], envInput[0], envInput[1]])
+    netInput = np.array([err[0] / 2, err[1] / 2, posOnPlate[0], posOnPlate[1], envInput[0], envInput[1],
+                         (posOnPlate[0]-prevPosOnPlate[0])/ballOnPlate.dt, (posOnPlate[1]-prevPosOnPlate[1])/ballOnPlate.dt])
     # print(netInput)
     netOutput = net.activate(netInput)
 
     ### PID controller
-    prop    = netOutput[0] * 500
-    diff    = netOutput[1] * 100
-    integr  = netOutput[2] * 0.1
+    prop    = netOutput[0]
+    diff    = netOutput[1]
+    integr  = netOutput[2]
 
     integr_err += err
     d_err = err - prev_err

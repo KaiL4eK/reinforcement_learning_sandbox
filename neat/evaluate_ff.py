@@ -28,24 +28,24 @@ def eval_genome(genome, config):
 
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
-    cost = 0
+    cost = 100
 
     # intial_positions = [[0  , 0  ],
     #                     [-0.4, 0.3],
     #                     [-0.5, -0.5],
     #                     [0.7, 0.7]]
+    CONST_VALUE = 0.7
+    intial_positions = [[CONST_VALUE, CONST_VALUE],
+                        [-CONST_VALUE, -CONST_VALUE],
+                        [-CONST_VALUE, CONST_VALUE],
+                        [CONST_VALUE, -CONST_VALUE],
+                        [0., 0.], [0., 0.]]
 
-    intial_positions = [[0.5, 0.5],
-                        [-0.5, -0.5],
-                        [-0.5, 0.5],
-                        [0.5, -0.5],
-                        [0., 0.]]
-
-    reference_positions = [[-0.5, -0.5],
-                           [0.5, 0.5],
-                           [0.5, -0.5],
-                           [-0.5, 0.5],
-                           [0., 0.]]
+    reference_positions = [[-CONST_VALUE, -CONST_VALUE],
+                           [CONST_VALUE, CONST_VALUE],
+                           [CONST_VALUE, -CONST_VALUE],
+                           [-CONST_VALUE, CONST_VALUE],
+                           [0., 0.], [0., 0.]]
 
     for i in range(len(intial_positions)):
 
@@ -66,21 +66,25 @@ def eval_genome(genome, config):
             # half of plate circle
             if i == 4:
                 ref_point = np.array([.5*math.cos(ballOnPlate.time/2), .5*math.sin(ballOnPlate.time/2)])
+            elif i == 5:
+                ref_point = np.array([.5*math.cos(ballOnPlate.time), .5*math.sin(ballOnPlate.time)])
 
             # Get error
             err = ref_point - posOnPlate
-            result -= (err[0] * err[0] + err[1] * err[1]) * (ballOnPlate.time + 1) / 400.
+            result -= (err[0] * err[0] + err[1] * err[1]) * (ballOnPlate.time + 1) / 100.
+
+            speed = (posOnPlate - prevPosOnPlate)/ballOnPlate.dt
 
             # Process control system
-            netInput = np.array([err[0] / 2, err[1] / 2, posOnPlate[0], posOnPlate[1], envInput[0], envInput[1], 
-                                    (posOnPlate[0]-prevPosOnPlate[0])/ballOnPlate.dt, (posOnPlate[1]-prevPosOnPlate[1])/ballOnPlate.dt])
+            netInput = np.array([err[0] / 2, err[1] / 2, posOnPlate[0], posOnPlate[1], 
+                                envInput[0], envInput[1], speed[0], speed[1]])
             # print(netInput)
             netOutput = net.activate(netInput)
 
             ### PID controller
-            prop    = netOutput[0]# * 100
-            diff    = netOutput[1]# * 40
-            integr  = netOutput[2]# * 0.01
+            prop    = netOutput[0]
+            diff    = netOutput[1]
+            integr  = netOutput[2]
 
             integr_err += err
             d_err = err - prev_err
@@ -90,6 +94,7 @@ def eval_genome(genome, config):
             envInput[1] = prop * err[0] + diff * d_err[0] + integr_err[0] * integr
 
             prev_err = err
+            prevPosOnPlate = posOnPlate
             ### PID controller
 
             envInput = np.clip(envInput, -1, 1)
@@ -107,10 +112,12 @@ def eval_genome(genome, config):
         else:
             current_cost = (ballOnPlate.time + result) / simulation_seconds * 100.
 
-        cost += current_cost
+        # cost += current_cost
+        cost = min(current_cost, cost)
 
     ballOnPlate.close()
-    return cost / len(intial_positions)
+    # return cost / len(intial_positions)
+    return cost
         
 def eval_genomes(genomes, config):
 
