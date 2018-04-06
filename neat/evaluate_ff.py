@@ -24,7 +24,7 @@ def eval_genome(genome, config):
 
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
-    cost = 100
+    cost = 1e5
 
     # intial_positions = [[0  , 0  ],
     #                     [-0.4, 0.3],
@@ -62,8 +62,8 @@ def eval_genome(genome, config):
             # half of plate circle
             if i == 4:
                 ref_point = np.array([.5*math.cos(ballOnPlate.time/2), .5*math.sin(ballOnPlate.time/2)])
-            elif i == 5:
-                ref_point = np.array([.5*math.cos(ballOnPlate.time), .5*math.sin(ballOnPlate.time)])
+            # elif i == 5:
+                # ref_point = np.array([.5*math.cos(ballOnPlate.time), .5*math.sin(ballOnPlate.time)])
 
             # Get error
             err = ref_point - posOnPlate
