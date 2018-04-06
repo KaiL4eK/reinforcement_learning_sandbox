@@ -31,13 +31,13 @@ def eval_genome(genome, config):
                         [-CONST_VALUE, -CONST_VALUE],
                         [-CONST_VALUE, CONST_VALUE],
                         [CONST_VALUE, -CONST_VALUE],
-                        [0., 0.], [0., 0.]]
+                        [0., 0.]]
 
     reference_positions = [[-CONST_VALUE, -CONST_VALUE],
                            [CONST_VALUE, CONST_VALUE],
                            [CONST_VALUE, -CONST_VALUE],
                            [-CONST_VALUE, CONST_VALUE],
-                           [0., 0.], [0., 0.]]
+                           [0., 0.]]
 
     for i in range(len(intial_positions)):
 
@@ -58,8 +58,8 @@ def eval_genome(genome, config):
 
         while ballOnPlate.time < simulation_seconds:
             # half of plate circle
-            if i == 4:
-                ref_point = np.array([.5*math.cos(ballOnPlate.time/2), .5*math.sin(ballOnPlate.time/2)])
+            # if i == 4:
+                # ref_point = np.array([.5*math.cos(ballOnPlate.time/2), .5*math.sin(ballOnPlate.time/2)])
             # elif i == 5:
                 # ref_point = np.array([.5*math.cos(ballOnPlate.time), .5*math.sin(ballOnPlate.time)])
 
