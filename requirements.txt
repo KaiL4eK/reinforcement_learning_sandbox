@@ -7,3 +7,4 @@ graphviz
 keras
 h5py
 tensorflow-gpu
+deap
