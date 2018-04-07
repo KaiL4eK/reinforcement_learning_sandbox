@@ -69,7 +69,7 @@ def run():
     pop.add_reporter(stats)
     pop.add_reporter(neat.StdOutReporter(True))
     pop.add_reporter(r.FileReporter(logFname, True))
-    pop.add_reporter(neat.Checkpointer(generation_interval=10, filename_prefix=checkpointPrefix))
+    pop.add_reporter(neat.Checkpointer(generation_interval=100, filename_prefix=checkpointPrefix))
 
     # if render_flag:
     # winner = pop.run(eval_genomes)

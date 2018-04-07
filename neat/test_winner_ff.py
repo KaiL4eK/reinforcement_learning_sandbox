@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os
 import pickle
-
+import sys
 import time
 
 import neat
@@ -34,12 +34,12 @@ ref_point = np.array([0., 0.])
 t = 0
 
 envInput = [0, 0]
-result = 0
 dropDown = False
 
 ballOnPlate.reset()
 
 posOnPlate  = ballOnPlate.intial_pos
+prevPosOnPlate = posOnPlate
 prev_err    = [0, 0]
 integr_err  = 0
 
@@ -50,11 +50,12 @@ while ballOnPlate.time < 20:
 
     # Get error
     err = ref_point - posOnPlate
-    result -= (err[0] * err[0] + err[1] * err[1]) / 400.
+
+    speed = (posOnPlate - prevPosOnPlate)/ballOnPlate.dt
 
     # Process control system
-    netInput = np.array([err[0] / 2, err[1] / 2, posOnPlate[0], posOnPlate[1], envInput[0], envInput[1],
-                         (posOnPlate[0]-prevPosOnPlate[0])/ballOnPlate.dt, (posOnPlate[1]-prevPosOnPlate[1])/ballOnPlate.dt])
+    netInput = np.array([err[0], err[1], posOnPlate[0], posOnPlate[1], 
+                        envInput[0], envInput[1], speed[0], speed[1]])
     # print(netInput)
     netOutput = net.activate(netInput)
 
@@ -71,6 +72,7 @@ while ballOnPlate.time < 20:
     envInput[1] = prop * err[0] + diff * d_err[0] + integr_err[0] * integr
 
     prev_err = err
+    prevPosOnPlate = posOnPlate
     ### PID controller
 
     envInput = np.clip(envInput, -1, 1)

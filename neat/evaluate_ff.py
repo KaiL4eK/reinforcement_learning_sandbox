@@ -24,7 +24,7 @@ def eval_genome(genome, config):
 
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
-    cost = 1e5
+    cost = 0
 
     CONST_VALUE = 0.7
     intial_positions = [[CONST_VALUE, CONST_VALUE],
@@ -105,11 +105,10 @@ def eval_genome(genome, config):
         else:
             current_cost = (ballOnPlate.time + result) / simulation_seconds * 100.
 
-        # cost += current_cost
-        cost = min(current_cost, cost)
+        cost += current_cost / float(len(intial_positions))
+        # cost = min(current_cost, cost)
 
     ballOnPlate.close()
-    # return cost / len(intial_positions)
     return cost
         
 def eval_genomes(genomes, config):
